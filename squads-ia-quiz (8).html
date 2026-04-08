@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Squads IA — Quel est ton niveau ?</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f2ec;
+    --surface: #ffffff;
+    --border: #e2ddd6;
+    --border-dark: #c8c2b8;
+    --text: #1a1814;
+    --muted: #7a7570;
+    --accent: #c8440a;
+    --n1: #2563a8;
+    --n2: #1a7a52;
+    --n3: #b45309;
+    --n4: #6b21a8;
+  }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.6; min-height: 100vh; }
+
+  .header { border-bottom: 1px solid var(--border); background: var(--bg); padding: 0 2rem; display: flex; align-items: center; height: 60px; gap: 2rem; }
+  .logo { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+  .logo-icon { width: 28px; height: 28px; border: 1.5px solid var(--text); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; }
+  .header-nav { display: flex; gap: 1.5rem; font-size: 13px; color: var(--muted); }
+  .header-nav span { cursor: pointer; }
+  .header-nav span.active { color: var(--text); border-bottom: 2px solid var(--accent); padding-bottom: 2px; }
+
+  .app { max-width: 680px; margin: 0 auto; padding: 3rem 1.5rem; }
+  .screen { display: none; }
+  .screen.active { display: block; animation: fadeUp .35s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 1rem; }
+  .intro-title { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 5vw, 3rem); font-weight: 500; line-height: 1.1; color: var(--text); margin-bottom: 1.25rem; letter-spacing: -.02em; }
+  .intro-desc { font-size: 15px; color: var(--muted); line-height: 1.75; max-width: 520px; margin-bottom: 2.5rem; font-weight: 300; }
+  .intro-desc strong { color: var(--text); font-weight: 500; }
+
+  .meta-row { display: flex; gap: 2rem; margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
+  .meta-item { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+
+  .fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+  .field-row { display: flex; gap: 10px; }
+  .field { flex: 1; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 11px 14px; font-family: 'Inter', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .15s; }
+  .field::placeholder { color: #b0aca6; }
+  .field:focus { border-color: var(--border-dark); }
+  .field-error { font-size: 12px; color: var(--accent); display: none; margin-top: -4px; }
+
+  .btn-start { display: inline-flex; align-items: center; gap: 8px; background: var(--text); color: #fff; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; padding: 11px 24px; border-radius: 100px; border: none; cursor: pointer; transition: opacity .15s; letter-spacing: .01em; }
+  .btn-start:hover { opacity: .85; }
+
+  .progress-wrap { margin-bottom: 2.5rem; }
+  .progress-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .progress-bar { height: 2px; background: var(--border); border-radius: 2px; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s ease; }
+
+  .q-text { font-family: 'Playfair Display', serif; font-size: clamp(1.2rem, 3vw, 1.6rem); font-weight: 500; line-height: 1.3; color: var(--text); margin-bottom: 2rem; letter-spacing: -.01em; }
+
+  .options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 2rem; }
+  .option { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; transition: border-color .15s; text-align: left; }
+  .option:hover { border-color: var(--border-dark); }
+  .option.selected { border-color: var(--text); }
+  .opt-dot { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border-dark); flex-shrink: 0; margin-top: 2px; transition: background .15s, border-color .15s; display: flex; align-items: center; justify-content: center; }
+  .option.selected .opt-dot { background: var(--text); border-color: var(--text); }
+  .option.selected .opt-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: white; }
+  .opt-main { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.4; }
+  .opt-sub { font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 300; }
+
+  .btn-next { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; padding: 11px 24px; border-radius: 100px; border: 1px solid var(--border-dark); cursor: pointer; transition: background .15s, opacity .2s; opacity: 0; pointer-events: none; }
+  .btn-next.visible { opacity: 1; pointer-events: all; }
+  .btn-next:hover { background: var(--bg); }
+
+  .result-name-display { font-size: 13px; color: var(--muted); margin-bottom: .5rem; font-weight: 300; }
+  .result-eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; margin-bottom: .75rem; }
+  .result-eyebrow.n1 { color: var(--n1); }
+  .result-eyebrow.n2 { color: var(--n2); }
+  .result-eyebrow.n3 { color: var(--n3); }
+  .result-eyebrow.n4 { color: var(--n4); }
+  .result-title { font-family: 'Playfair Display', serif; font-size: clamp(1.75rem, 5vw, 2.75rem); font-weight: 500; line-height: 1.1; letter-spacing: -.02em; margin-bottom: .75rem; color: var(--text); }
+  .result-quote { font-size: 14px; color: var(--muted); font-style: italic; font-weight: 300; margin-bottom: 1.5rem; }
+  .result-desc { font-size: 14px; color: #4a4540; line-height: 1.75; font-weight: 300; margin-bottom: 1.5rem; padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  .result-squad { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 100px; font-size: 13px; font-weight: 500; margin-bottom: 2rem; border: 1px solid; }
+  .result-squad.n1 { background: #eff6ff; border-color: #bfdbfe; color: var(--n1); }
+  .result-squad.n2 { background: #f0fdf4; border-color: #bbf7d0; color: var(--n2); }
+  .result-squad.n3 { background: #fffbeb; border-color: #fde68a; color: var(--n3); }
+  .result-squad.n4 { background: #faf5ff; border-color: #e9d5ff; color: var(--n4); }
+
+  .btn-restart { display: inline-flex; align-items: center; gap: 6px; background: transparent; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 400; padding: 8px 16px; border-radius: 100px; border: 1px solid var(--border); cursor: pointer; transition: color .15s, border-color .15s; }
+  .btn-restart:hover { color: var(--text); border-color: var(--border-dark); }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+  @media (max-width: 480px) {
+    .header-nav { display: none; }
+    .field-row { flex-direction: column; }
+    .intro-title { font-size: 1.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="screen active" id="screen-intro">
+    <div class="eyebrow">Squads IA</div>
+    <h1 class="intro-title">Quel est ton niveau IA ?</h1>
+    <p class="intro-desc">
+      5 questions pour déterminer ton niveau IA. Une fois ton profil identifié, tu seras affecté au squad qui te correspond.<br><br>
+      <strong>Sois honnête sur ce que tu fais aujourd'hui,</strong> pas sur ce que tu aimerais faire pour progresser au mieux.
+    </p>
+    <div class="meta-row">
+      <div class="meta-item">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        2 minutes
+      </div>
+      <div class="meta-item">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Groupes de 6
+      </div>
+      <div class="meta-item">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        4 niveaux
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field-row">
+        <input class="field" id="field-prenom" type="text" placeholder="Prénom" autocomplete="given-name">
+        <input class="field" id="field-nom" type="text" placeholder="Nom" autocomplete="family-name">
+      </div>
+      <input class="field" id="field-email" type="email" placeholder="Email professionnel" autocomplete="email">
+      <div class="field-error" id="field-error">Merci de renseigner ton prénom, nom et email.</div>
+    </div>
+    <button class="btn-start" onclick="startQuiz()">
+      Commencer
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </div>
+
+  <div class="screen" id="screen-quiz">
+    <div class="progress-wrap">
+      <div class="progress-label" id="progress-label"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+    <div class="q-text" id="q-text"></div>
+    <div class="options" id="options"></div>
+    <button class="btn-next" id="btn-next" onclick="nextQuestion()">Suivant</button>
+  </div>
+
+  <div class="screen" id="screen-result">
+    <div class="result-name-display" id="result-name"></div>
+    <div class="result-eyebrow" id="result-eyebrow"></div>
+    <div class="result-title" id="result-title"></div>
+    <div class="result-quote" id="result-quote"></div>
+    <div class="result-desc" id="result-desc"></div>
+    <div><div class="result-squad" id="result-squad"></div></div>
+    <hr class="divider">
+    <button class="btn-restart" onclick="restart()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+      Recommencer
+    </button>
+  </div>
+
+</div>
+
+<script>
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbx7xSQvYK4W9sis1L1Sv6B4hBMdXKu7oE25EPd5h9Y0yCJRC0971v-BtwjajrB3zz8x/exec";
+
+const questions = [
+  { text: "Comment utilises-tu l'IA dans ton travail aujourd'hui ?", options: [
+    { main: "Presque tous les jours pour des tâches concrètes", sub: "Rédaction, synthèse, recherche, code...", score: 1 },
+    { main: "Je construis des outils ou workflows IA pour mon équipe", sub: "Automatisations, agents, intégrations...", score: 2 },
+    { main: "Je pilote une stratégie IA à l'échelle de mon organisation", sub: "Architecture, gouvernance, déploiement...", score: 3 },
+    { main: "L'IA est le cœur de mon produit — c'est mon métier", sub: "Je suis fondateur d'une startup AI native", score: 4 }
+  ]},
+  { text: "Quel est ton niveau de maîtrise du prompt engineering ?", options: [
+    { main: "Je structure mes prompts, donne du contexte et itère", sub: "J'obtiens de bons résultats de façon reproductible", score: 1 },
+    { main: "Je conçois des prompts systèmes et des pipelines", sub: "Pour des agents, des chaînes d'instructions complexes", score: 2 },
+    { main: "Je travaille sur des architectures multi-agents", sub: "Fine-tuning, évaluation de modèles, optimisation avancée", score: 3 },
+    { main: "Je conçois des systèmes IA en production", sub: "Avec monitoring, évaluation continue et stack LLM custom", score: 4 }
+  ]},
+  { text: "As-tu déjà automatisé un processus métier avec l'IA ?", options: [
+    { main: "J'utilise des outils no-code avec IA intégrée", sub: "Notion AI, Copilot, outils SaaS... mais pas de workflow sur mesure", score: 1 },
+    { main: "Oui, j'ai construit des workflows avec Make, n8n ou similaire", sub: "Connectés à des LLM via API", score: 2 },
+    { main: "Oui, j'ai déployé des agents IA en production", sub: "Avec monitoring, gestion des erreurs, RAG...", score: 3 },
+    { main: "L'IA est le cœur de mon produit — pas juste un outil interne", sub: "Je construis le produit IA lui-même", score: 4 }
+  ]},
+  { text: "Comment ton équipe utilise-t-elle l'IA ?", options: [
+    { main: "Quelques membres l'utilisent de façon individuelle", sub: "Mais sans cadre ni partage systématique", score: 1 },
+    { main: "J'ai mis en place des outils ou pratiques IA partagés", sub: "Templates, workflows, formation interne...", score: 2 },
+    { main: "L'IA est intégrée dans nos processus à l'échelle de l'entreprise", sub: "Politique, outils dédiés, KPIs...", score: 3 },
+    { main: "Mon équipe est entièrement organisée autour de l'IA", sub: "C'est notre produit et notre avantage compétitif central", score: 4 }
+  ]},
+  { text: "Quel est ton principal objectif en rejoignant un Squad IA ?", options: [
+    { main: "Optimiser mes usages personnels et gagner en productivité", sub: "Aller plus loin dans ce que je fais déjà au quotidien", score: 1 },
+    { main: "Construire des automatisations et agents pour mon organisation", sub: "Passer de l'usage perso à l'impact collectif", score: 2 },
+    { main: "Confronter ma stratégie IA avec d'autres dirigeants avancés", sub: "Gouvernance, architecture, IA à l'échelle", score: 3 },
+    { main: "Échanger avec d'autres fondateurs sur la stack et le produit IA", sub: "Go-to-market, modèles, compétition sur un marché qui bouge vite", score: 4 }
+  ]},
+  { text: "Souhaites-tu rejoindre un Squad IA ?", intent: true, options: [
+    { main: "Oui, je veux rejoindre un squad", sub: "Je suis partant pour intégrer un groupe de 6 membres", join: true },
+    { main: "Je passe le test par curiosité", sub: "Je veux juste connaître mon niveau, sans m'engager pour l'instant", join: false }
+  ]}
+];
+
+const levels = {
+  1: { cls:"n1", eyebrow:"Niveau 1", title:"Productivité augmentée", quote:"« Je m'en sers tous les jours »", desc:"L'IA fait déjà partie de ta routine : tu gagnes du temps, tu produis mieux. L'enjeu maintenant c'est d'aller plus loin, de partager tes pratiques et d'en découvrir de nouvelles avec des entrepreneurs au même stade.", squad:"Tu rejoins le Squad Productivité augmentée" },
+  2: { cls:"n2", eyebrow:"Niveau 2", title:"Automatisation & Agents", quote:"« Je construis mes premiers agents »", desc:"Tu passes de l'usage personnel à l'impact organisationnel : workflows, automatisations, premiers agents. Ce squad te permettra de comparer tes approches et de débloquer des cas d'usage complexes avec des pairs builders.", squad:"Tu rejoins le Squad Automatisation & Agents" },
+  3: { cls:"n3", eyebrow:"Niveau 3", title:"IA avancée / Architecture", quote:"« Je scale l'IA dans mon organisation »", desc:"Tu as une vision stratégique et tu déploies l'IA à grande échelle. Ce squad est fait pour confronter tes choix d'architecture, de gouvernance et de stratégie avec d'autres dirigeants au même niveau de maturité.", squad:"Tu rejoins le Squad IA avancée / Architecture" },
+  4: { cls:"n4", eyebrow:"Niveau 4", title:"AI Native", quote:"« L'IA est le cœur de mon produit »", desc:"Tu es fondateur d'une startup AI native — l'IA n'est pas un outil, c'est ton produit. Ce squad rassemble des pairs qui affrontent les mêmes défis : stack LLM, product-market fit, compétition sur un marché qui se redéfinit chaque semaine.", squad:"Tu rejoins le Squad AI Native" }
+};
+
+let current = 0, answers = [], userData = {};
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  setTimeout(function() {
+    var el = document.getElementById(id);
+    if (el) el.classList.add('active');
+  }, 50);
+}
+
+function startQuiz() {
+  var prenom = document.getElementById('field-prenom').value.trim();
+  var nom = document.getElementById('field-nom').value.trim();
+  var email = document.getElementById('field-email').value.trim();
+  var err = document.getElementById('field-error');
+  if (!prenom || !nom || !email || !email.includes('@')) { err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  userData = { prenom, nom, email };
+  current = 0; answers = [];
+  show('screen-quiz');
+  setTimeout(renderQuestion, 100);
+}
+
+function renderQuestion() {
+  const q = questions[current];
+  document.getElementById('progress-label').textContent = 'Question ' + (current + 1) + ' sur ' + questions.length;
+  document.getElementById('progress-fill').style.width = Math.round((current / questions.length) * 100) + '%';
+  document.getElementById('q-text').textContent = q.text;
+  document.getElementById('options').innerHTML = q.options.map((opt, i) =>
+    '<button class="option" onclick="selectOption(' + i + ')" id="opt-' + i + '">' +
+    '<div class="opt-dot"></div>' +
+    '<div class="opt-content"><div class="opt-main">' + opt.main + '</div>' +
+    (opt.sub ? '<div class="opt-sub">' + opt.sub + '</div>' : '') +
+    '</div></button>'
+  ).join('');
+  const btn = document.getElementById('btn-next');
+  btn.classList.remove('visible');
+  btn.innerHTML = (current === questions.length - 1 ? 'Voir mon niveau →' : 'Suivant →');
+  btn.onclick = nextQuestion;
+}
+
+function selectOption(i) {
+  document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  document.getElementById('opt-' + i).classList.add('selected');
+  var q = questions[current];
+  if (q.intent) {
+    answers[current] = q.options[i].join ? 'join' : 'curious';
+  } else {
+    answers[current] = q.options[i].score;
+  }
+  document.getElementById('btn-next').classList.add('visible');
+}
+
+function nextQuestion() {
+  if (answers[current] === undefined) return;
+  current++;
+  if (current >= questions.length) { showResult(); return; }
+  var quiz = document.getElementById('screen-quiz');
+  quiz.style.opacity = '0';
+  setTimeout(function() { renderQuestion(); quiz.style.opacity = '1'; }, 180);
+}
+
+function showResult() {
+  var intentAnswer = answers[answers.length - 1];
+  var scores = answers.slice(0, answers.length - 1).filter(function(a) { return typeof a === 'number'; });
+  var avg = scores.reduce(function(a, b) { return a + b; }, 0) / scores.length;
+  var lvl = avg <= 1.5 ? 1 : avg <= 2.5 ? 2 : avg <= 3.5 ? 3 : 4;
+  var l = levels[lvl];
+  var wantsJoin = intentAnswer === 'join';
+
+  document.getElementById('result-name').textContent = userData.prenom + ' ' + userData.nom;
+  document.getElementById('result-eyebrow').className = 'result-eyebrow ' + l.cls;
+  document.getElementById('result-eyebrow').textContent = l.eyebrow;
+  document.getElementById('result-title').textContent = l.title;
+  document.getElementById('result-quote').textContent = l.quote;
+  document.getElementById('result-desc').textContent = l.desc;
+
+  var squadEl = document.getElementById('result-squad');
+  if (wantsJoin) {
+    squadEl.className = 'result-squad ' + l.cls;
+    squadEl.textContent = '→ ' + l.squad;
+    squadEl.style.display = 'inline-flex';
+  } else {
+    squadEl.className = 'result-squad';
+    squadEl.style.background = '#f7f6f3';
+    squadEl.style.borderColor = '#e9e9e7';
+    squadEl.style.color = '#9b9a97';
+    squadEl.textContent = "Résultat pour info — pas d'inscription au squad";
+    squadEl.style.display = 'inline-flex';
+  }
+
+  fetch(SHEET_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prenom: userData.prenom, nom: userData.nom, email: userData.email, niveau: l.eyebrow + ' — ' + l.title, squad: wantsJoin ? l.squad : "Curiosité — pas d'inscription", inscription: wantsJoin ? 'Oui' : 'Non', date: new Date().toLocaleString('fr-FR') }) });
+  show('screen-result');
+}
+
+function restart() { show('screen-intro'); }
+</script>
+</body>
+</html>
